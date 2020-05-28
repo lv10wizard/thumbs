@@ -2,6 +2,14 @@
 
 Create thumbnail contact sheets for videos.
 
+### Dependencies:
+
+* python3.5+
+* ffmpeg
+* imagemagick
+
+#
+
     $ thumbs -h
 
     usage: thumbs [-h] [-v] [-Q] [-o OUTPUT] [-q QUALITY] [-y] [-n] [-T]
