@@ -391,7 +391,8 @@ def screenshot(path: Path, out: Path, seek: float, width: int, *,
 
 def stitch(width: int, height: int, quality: int, info: MediaInfo,
         screens: List[Path], out: Path, *,
-        font: str=None, size: int=18) -> Optional[Path]:
+        background: str='#232323',
+        font: str=None, size: int=18, color: str='#FFFFFFFF') -> Optional[Path]:
     """
     stitch joins the input screenshots together into a single image of rows-
         cells high and cols-cells wide.
@@ -403,8 +404,11 @@ def stitch(width: int, height: int, quality: int, info: MediaInfo,
         screens: List of input screenshots to join into the output image.
         out: The path to write the output image to.
 
+        background: The background color of any empty space in the output
+                    image.
         font: The font to use to draw metadata.
         size: The font point size to use to draw metadata.
+        color: The metadata font color.
 
     Returns:
         pathlib.Path: The output image's path if successful.
@@ -416,9 +420,12 @@ def stitch(width: int, height: int, quality: int, info: MediaInfo,
             ' -quality {q}' # Set compression level of the contact sheet
             ' -tile {w}x{h}' # Arrange the contact sheet
             ' -geometry +{xoffs}+{yoffs}' # Space out the images
+            ' -background {background}' # Set the background color
             ' {infiles} "{outfile}"'.format(w=width, h=height, q=quality,
                 xoffs=COLLAGE_X_OFFS, yoffs=COLLAGE_Y_OFFS,
-                infiles=' '.join(['"{0}"'.format(s) for s in screens]), outfile=out))
+                background=background,
+                infiles=' '.join(['"{0}"'.format(s) for s in screens]),
+                outfile=out))
     if result.returncode != 0:
         return None
 
@@ -457,13 +464,16 @@ def stitch(width: int, height: int, quality: int, info: MediaInfo,
     # Draw the media info.
     font = '-font {0}'.format(font) if font else ''
     size = '-pointsize {0}'.format(size) if size > 0 else ''
+    color = '-fill {0}'.format(color) if color else ''
     result = runcmd('convert "{outfile}"' # Take the contact sheet as input
-            ' {font} {size}' # Specify font and fontsize
+            ' -background {background}' # Set the background color
+            ' {font} {size} {color}' # Specify font settings
             ' label:\'{data}\'' # Specify the text to draw
             ' +swap' # Place the data above the contact sheet
             ' -append' # Join the images together
             ' "{outfile}"'.format( # Overwrite the contact sheet
-                outfile=out, font=font, size=size,
+                background=background,
+                outfile=out, font=font, size=size, color=color,
                 data='\\n'.join(data)))
     if result.returncode != 0:
         return None
@@ -632,10 +642,14 @@ def init_parser() -> argparse.ArgumentParser:
     parser.add_argument('-w', '--watermark',
             help='Path to the watermark each screenshot with')
 
+    parser.add_argument('-B', '--background', default='#232323',
+            help='Background color of the contact sheet\'s empty space')
     parser.add_argument('-F', '--font', default='Arial',
             help='The name of the font to use for metadata.')
     parser.add_argument('-S', '--size', default=20, type=int,
             help='The font size of metadata.')
+    parser.add_argument('-C', '--fontcolor', default='#FFFFFFFF',
+            help='The font color of metdata.')
 
     parser.add_argument('--vr', choices=('L', 'R', 'T', 'B'),
             help='Crop the thumbnails to a specific VR eye'
@@ -878,7 +892,8 @@ if __name__ == '__main__':
                 log(0, 'Creating contact sheet ... ', print_kwargs={'end': ''})
                 stitch(opts.tiles_width, opts.tiles_height,
                         opts.quality, info, screens, output,
-                        font=opts.font, size=opts.size)
+                        background=opts.background,
+                        font=opts.font, size=opts.size, color=opts.fontcolor)
                 log(0, '\tDone!')
 
     finally:
